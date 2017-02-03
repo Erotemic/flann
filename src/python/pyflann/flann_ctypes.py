@@ -198,7 +198,7 @@ def load_flann_library():
     possible_subdirs.append('lib')
     possible_subdirs.append('build/lib')
 
-    if False:
+    if True:
         # Exhaustive checks to find library
         def gen_possible_libpaths():
             root_dir = abspath(dirname(__file__))
@@ -259,8 +259,6 @@ def load_flann_library():
                     print('[flann] Trying to fallback on %s' % (libpath,))
                 tried_paths.append(libpath)
                 flannlib = cdll[libpath]
-                import utool
-                utool.embed()
                 break
             except:
                 flannlib = None

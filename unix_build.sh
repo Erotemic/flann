@@ -70,7 +70,6 @@ make -j$NCPUS
 # Develop pyflann
 echo $FLANNDIR
 pip install -e $FLANNDIR/src/python
-pip install -e $FLANNDIR/src/python
 
 #cd $FLANNDIR/src/python
 #python setup.py develop
