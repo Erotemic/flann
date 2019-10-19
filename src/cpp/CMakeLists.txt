@@ -9,12 +9,12 @@ file(GLOB_RECURSE CPP_SOURCES flann_cpp.cpp)
 file(GLOB_RECURSE CU_SOURCES *.cu)
 
 
-# I don't know why gcc had no sources in their library, but its broken on my
-# machine.
-set(FAKE_C_SOURCES "")
-set(FAKE_CU_SOURCES "")
-set(FAKE_CPP_SOURCES "")
-
+# I don't know why C bindings had no sources in their library.
+# Newer cmakes seem to require at least one sourcefile in add_library calls
+# Older CMake versions didn't need this. Giving it a header fixes the issue.
+#set(FAKE_C_SOURCES "")
+#set(FAKE_CU_SOURCES "")
+#set(FAKE_CPP_SOURCES "")
 set(FAKE_C_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/flann/flann.h")
 set(FAKE_CU_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/flann/flann.h")
 set(FAKE_CPP_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/flann/flann.h")
@@ -78,15 +78,17 @@ if (BUILD_CUDA_LIB)
 endif()
 
 
-if (USE_MPI AND HDF5_IS_PARALLEL)
-    add_executable(flann_mpi_server flann/mpi/flann_mpi_server.cpp)
-    target_link_libraries(flann_mpi_server flann_cpp ${HDF5_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+if (NOT SKBUILD)
+  if (USE_MPI AND HDF5_IS_PARALLEL)
+      add_executable(flann_mpi_server flann/mpi/flann_mpi_server.cpp)
+      target_link_libraries(flann_mpi_server flann_cpp ${HDF5_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
 
-    add_executable(flann_mpi_client flann/mpi/flann_mpi_client.cpp)
-    target_link_libraries(flann_mpi_client flann_cpp ${HDF5_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
+      add_executable(flann_mpi_client flann/mpi/flann_mpi_client.cpp)
+      target_link_libraries(flann_mpi_client flann_cpp ${HDF5_LIBRARIES} ${MPI_LIBRARIES} ${Boost_LIBRARIES})
 
-    install (TARGETS flann_mpi_client flann_mpi_server
-        DESTINATION bin)
+      install (TARGETS flann_mpi_client flann_mpi_server
+          DESTINATION bin)
+  endif()
 endif()
 
 
@@ -116,73 +118,75 @@ if (BUILD_C_BINDINGS)
        SOVERSION ${FLANN_SOVERSION}
        DEFINE_SYMBOL FLANN_EXPORTS
     )
-
-    if (BUILD_PYTHON_BINDINGS)
-        #message(STATUS "USING SKBUILD? = ${SKBUILD}")
-        #if(SKBUILD)
-        #    # References:
-        #    # https://scikit-build.readthedocs.io/en/latest/cmake-modules/PythonExtensions.html
-        #    python_extension_module(flann)
-        #    #LINKED_MODULES_VAR linked_module_list
-        #    #FORWARD_DECL_MODULES_VAR fdecl_module_list)
-        #endif()
-
-        # Install pyflann at the root level
-        #install(
-        #  DIRECTORY "${CMAKE_SOURCE_DIR}/pyflann"
-        #  DESTINATION ""
-        #)
-        install(
-          TARGETS flann
-          RUNTIME DESTINATION "pyflann"
-        )
-    endif()
 endif()
 
-if(WIN32)
-if (BUILD_C_BINDINGS AND BUILD_MATLAB_BINDINGS)
+
+message(STATUS "USING SKBUILD? = ${SKBUILD}")
+if(SKBUILD)
+    # References:
+    # https://scikit-build.readthedocs.io/en/latest/cmake-modules/PythonExtensions.html
+    #find_package(PythonExtensions)
+    #python_extension_module(flann)
+    #LINKED_MODULES_VAR linked_module_list
+    #FORWARD_DECL_MODULES_VAR fdecl_module_list)
     install (
-        TARGETS flann
-        RUNTIME DESTINATION share/flann/matlab
-    )
-endif()
-endif(WIN32)
-
-
-install (
-    TARGETS flann_cpp flann_cpp_s
-    EXPORT ${targets_export_name}
-    INCLUDES DESTINATION include
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION ${FLANN_LIB_INSTALL_DIR}
-    ARCHIVE DESTINATION ${FLANN_LIB_INSTALL_DIR}
-)
-
-if (BUILD_CUDA_LIB)
-    install (
-        TARGETS flann_cuda flann_cuda_s
+        TARGETS flann_cpp flann_cpp_s
         EXPORT ${targets_export_name}
-        INCLUDES DESTINATION include
-        RUNTIME DESTINATION bin
+        #INCLUDES DESTINATION include
+        #RUNTIME DESTINATION bin
         LIBRARY DESTINATION ${FLANN_LIB_INSTALL_DIR}
         ARCHIVE DESTINATION ${FLANN_LIB_INSTALL_DIR}
     )
-endif()
-
-if (BUILD_C_BINDINGS)
-      message(STATUS "FLANN_LIB_INSTALL_DIR = ${FLANN_LIB_INSTALL_DIR}")
     install (
         TARGETS flann flann_s
         EXPORT ${targets_export_name}
-        INCLUDES DESTINATION include
-        RUNTIME DESTINATION bin
+        #INCLUDES DESTINATION include
+        #RUNTIME DESTINATION bin
         LIBRARY DESTINATION ${FLANN_LIB_INSTALL_DIR}
         ARCHIVE DESTINATION ${FLANN_LIB_INSTALL_DIR}
     )
 endif()
 
-install (
-    DIRECTORY flann
-    DESTINATION include
-    FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
-)
+
+if(NOT SKBUILD)
+  # Skip this part if running via setup.py
+
+  if(WIN32)
+  if (BUILD_C_BINDINGS AND BUILD_MATLAB_BINDINGS)
+      install (
+          TARGETS flann
+          RUNTIME DESTINATION share/flann/matlab
+      )
+  endif()
+  endif(WIN32)
+
+  if (BUILD_CUDA_LIB)
+      install (
+          TARGETS flann_cuda flann_cuda_s
+          EXPORT ${targets_export_name}
+          INCLUDES DESTINATION include
+          RUNTIME DESTINATION bin
+          LIBRARY DESTINATION ${FLANN_LIB_INSTALL_DIR}
+          ARCHIVE DESTINATION ${FLANN_LIB_INSTALL_DIR}
+      )
+  endif()
+
+  if (BUILD_C_BINDINGS)
+      message(STATUS "FLANN_LIB_INSTALL_DIR = ${FLANN_LIB_INSTALL_DIR}")
+      install (
+          TARGETS flann flann_s
+          EXPORT ${targets_export_name}
+          INCLUDES DESTINATION include
+          RUNTIME DESTINATION bin
+          LIBRARY DESTINATION ${FLANN_LIB_INSTALL_DIR}
+          ARCHIVE DESTINATION ${FLANN_LIB_INSTALL_DIR}
+      )
+  endif()
+
+  install (
+      DIRECTORY flann
+      DESTINATION include
+      FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"
+  )
+
+endif()

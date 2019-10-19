@@ -52,6 +52,15 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 # set output path for tests
 set(TEST_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/test)
 
+message(STATUS "SKBUILD = ${SKBUILD}")
+if (SKBUILD)
+  # Override output paths when using scikit-build
+  set(FLANN_LIB_INSTALL_DIR "pyflann/lib")
+  set(FLANN_INCLUDE_INSTALL_DIR "pyflann/include")
+  #set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/pyflann/bin)
+  #set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/pyflann/lib)
+endif()
+
 option(BUILD_C_BINDINGS "Build C bindings" ON)
 # Replaced by skbuild
 #option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
@@ -71,7 +80,6 @@ endif()
 
 
 # find python
-<<<<<<< HEAD
 #if (BUILD_PYTHON_BINDINGS)
 #    if(SKBUILD)
 #        # Includes scikit-build python_extension_module command
@@ -84,21 +92,12 @@ endif()
 #    set(BUILD_PYTHON_BINDINGS OFF)
 #endif()
 #endif()
-||||||| merged common ancestors
-if (BUILD_PYTHON_BINDINGS)
-find_package(PythonInterp)
-if (NOT PYTHON_EXECUTABLE)
-    set(BUILD_PYTHON_BINDINGS OFF)
-endif()
-endif()
-=======
 #if (BUILD_PYTHON_BINDINGS)
 #find_package(PythonInterp)
 #if (NOT PYTHON_EXECUTABLE)
 #    set(BUILD_PYTHON_BINDINGS OFF)
 #endif()
 #endif()
->>>>>>> a8e9f53040f7f01d3e915e4c9669c47428bee1fb
 
 find_hdf5()
 if (NOT HDF5_FOUND)
@@ -195,7 +194,9 @@ set(project_config "${generated_dir}/flann-config.cmake")
 set(targets_export_name "flann-targets")
 set(namespace "flann::")
 
-add_subdirectory( cmake )
+if (NOT SKBUILD)
+  add_subdirectory( cmake )
+endif()
 add_subdirectory( src )
 if (BUILD_EXAMPLES)
   add_subdirectory( examples )
@@ -229,20 +230,22 @@ configure_package_config_file(
     INSTALL_DESTINATION "${config_install_dir}"
 )
 
-# Config
-#   * <prefix>/lib/cmake/flann/flann-config.cmake
-#   * <prefix>/lib/cmake/flann/flann-config-version.cmake
-install(
-    FILES "${project_config}" "${version_config}"
-    DESTINATION "${config_install_dir}"
-)
-# Config
-#   * <prefix>/lib/cmake/flann/flann-targets.cmake
-install(
-    EXPORT "${targets_export_name}"
-    NAMESPACE "${namespace}"
-    DESTINATION "${config_install_dir}"
-)
+if (NOT SKBUILD)
+  # Config
+  #   * <prefix>/lib/cmake/flann/flann-config.cmake
+  #   * <prefix>/lib/cmake/flann/flann-config-version.cmake
+  install(
+      FILES "${project_config}" "${version_config}"
+      DESTINATION "${config_install_dir}"
+  )
+  # Config
+  #   * <prefix>/lib/cmake/flann/flann-targets.cmake
+  install(
+      EXPORT "${targets_export_name}"
+      NAMESPACE "${namespace}"
+      DESTINATION "${config_install_dir}"
+  )
+endif()
 
 
 # CPACK options
